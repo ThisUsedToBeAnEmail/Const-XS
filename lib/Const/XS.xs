@@ -42,9 +42,8 @@ const(...)
 	PROTOTYPE: \[$@%]@
 	CODE:
 		int i = 1;
-		int len = items;
 
-		if (len < 2) {
+		if (items < 2) {
 			croak("No value for readonly variable");
 		}
 
