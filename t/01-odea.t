@@ -1,6 +1,7 @@
 use Const::XS qw/all/;
 use Test::More;
 const my $foo => 'a scalar value';
+
 const my @bar => qw/a list value/, { hash => 1, deep => { one => 'nope' } }, [ 'nested', { hash => 2 } ];
 const my %buz => (a => 'hash', of => 'something', array => [ 'nested', { hash => 1 } ], hash => { hash => 2, deep => { one => 'nope' } } );
 const my $sub => sub { return 1 };
@@ -13,12 +14,17 @@ const my $factory2 => {
 	two => sub { 2 },
 };
 
+const my $scalar => \1234;
 
-eval {
-	const my $undefined = 1;
-};
+if ($] >= 5.016) {
+	eval "
+		const my \$undefined = 1;
+	";
 
-like($@, qr/No value for readonly variable/);
+	like($@, qr/No value for readonly variable/, 'No value for readonly variable');
+} else {
+	diag explain 'Skip: Type of arg 1 to must be one of [$@%]';
+}
 
 is($foo, 'a scalar value');
 
@@ -134,5 +140,25 @@ eval { $factory2->{one} = sub { 3 } };
 like($@, qr/Modification of a read-only value attempted/); 
 
 is($factory2->{one}->(), 1);
+
+{
+	package Why::Would::You;
+	
+	sub new {
+		bless { a => 1, b => 2,  c => 3 }, $_[0];
+	}
+}
+
+const my $obj => Why::Would::You->new();
+
+is($obj->{a}, 1);
+
+eval { $obj->{d} = 'kaput' };
+
+like($@, qr/Attempt to access disallowed key \'d\' in a restricted hash/);
+
+eval { ${$scalar} = 'def'; };
+
+like($@, qr/Modification of a read-only value attempted/); 
 
 done_testing();
